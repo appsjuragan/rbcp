@@ -95,22 +95,29 @@ impl eframe::App for RbcpApp {
             ctx.request_repaint();
         }
 
+        // Define colors from mockup
+        let purple_color = egui::Color32::from_rgb(160, 32, 240); // Purple
+        // let border_color = egui::Color32::BLACK; // Default is fine for now
+
         egui::CentralPanel::default().show(ctx, |ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+
             // Title
             ui.heading(format!("RBCP version {}", crate::VERSION));
             ui.separator();
 
-            // Source
+            // Source Section
             ui.horizontal(|ui| {
-                ui.label("Source path:");
+                ui.label(egui::RichText::new("Source path:").color(purple_color));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("options").clicked() {
                         self.show_options = !self.show_options;
                     }
                 });
             });
+            
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.source).hint_text("Source directory"));
+                ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 70.0));
                 if ui.button("browse").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.source = path.to_string_lossy().to_string();
@@ -118,10 +125,10 @@ impl eframe::App for RbcpApp {
                 }
             });
 
-            // Destination
-            ui.label("Destination path:");
+            // Destination Section
+            ui.label(egui::RichText::new("Destination path:").color(purple_color));
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.destination).hint_text("Destination directory"));
+                ui.add(egui::TextEdit::singleline(&mut self.destination).desired_width(ui.available_width() - 70.0));
                 if ui.button("browse").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.destination = path.to_string_lossy().to_string();
@@ -129,51 +136,58 @@ impl eframe::App for RbcpApp {
                 }
             });
 
-            ui.add_space(10.0);
+            ui.add_space(5.0);
 
-            // Progress
-            ui.label("Progress:");
+            // Progress Section
+            ui.label(egui::RichText::new("Progress:").color(purple_color));
+            
             let pct = info.percentage() / 100.0;
+            let progress_text = format!("{:.0}%", info.percentage());
+            
             let progress_bar = egui::ProgressBar::new(pct)
-                .show_percentage()
+                .text(egui::RichText::new(progress_text).color(purple_color))
+                .fill(purple_color)
                 .animate(info.state == ProgressState::Scanning);
             
             ui.add(progress_bar);
 
-            // Status text
+            // Status Text
             ui.horizontal(|ui| {
                 if info.state == ProgressState::Scanning {
-                    ui.label(format!("Scanning... {} files found", info.files_total));
+                    ui.label(egui::RichText::new(format!("Scanning... {} files found", info.files_total)).color(purple_color));
                 } else if info.files_total > 0 {
-                    ui.label(format!("{} of {} objects", info.files_done, info.files_total));
+                    ui.label(egui::RichText::new(format!("{} of {} objects", info.files_done, info.files_total)).color(purple_color));
                 } else {
-                    ui.label("Ready");
+                    ui.label(egui::RichText::new("0 of 0 objects").color(purple_color));
                 }
             });
             
-            // Current file
+            // Current file path
             ui.label(egui::RichText::new(&info.current_file).weak().size(12.0));
 
             ui.add_space(10.0);
             ui.separator();
 
-            // Controls
+            // Bottom Controls
             ui.horizontal(|ui| {
+                // Show log checkbox (Left)
                 if ui.checkbox(&mut self.show_log, "Show log").changed() {
                     // Toggle logic handled by state
                 }
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // OK/Minimize (Start)
+                    let button_height = 30.0;
+                    let button_width = 100.0;
+
+                    // OK/Minimize (Rightmost)
                     let is_running = matches!(info.state, ProgressState::Scanning | ProgressState::Copying | ProgressState::Paused);
                     
                     if is_running {
-                         if ui.button("Minimize to tray").clicked() {
-                             // TODO: Implement tray
+                         if ui.add_sized([button_width, button_height], egui::Button::new("Minimize to tray")).clicked() {
                              ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
                          }
                     } else {
-                        if ui.button("Start Copy").clicked() {
+                        if ui.add_sized([button_width, button_height], egui::Button::new("Start Copy")).clicked() {
                             self.start_copy();
                         }
                     }
@@ -181,38 +195,45 @@ impl eframe::App for RbcpApp {
                     // Pause/Continue
                     if is_running {
                         let label = if self.progress.is_paused() { "Continue" } else { "Pause" };
-                        if ui.button(label).clicked() {
+                        if ui.add_sized([button_width, button_height], egui::Button::new(label)).clicked() {
                             self.toggle_pause();
                         }
                     } else {
-                        ui.add_enabled(false, egui::Button::new("Pause/Continue"));
+                        ui.add_enabled_ui(false, |ui| {
+                            ui.add_sized([button_width, button_height], egui::Button::new("Pause/Continue"));
+                        });
                     }
 
                     // Cancel
                     if is_running {
-                        if ui.button("Cancel").clicked() {
+                        if ui.add_sized([button_width, button_height], egui::Button::new("Cancel")).clicked() {
                             self.cancel_copy();
                         }
                     } else {
-                        ui.add_enabled(false, egui::Button::new("Cancel"));
+                        ui.add_enabled_ui(false, |ui| {
+                            ui.add_sized([button_width, button_height], egui::Button::new("Cancel"));
+                        });
                     }
                 });
             });
 
             // Log Area
             if self.show_log {
-                ui.separator();
-                egui::ScrollArea::vertical()
-                    .stick_to_bottom(true) // Auto scroll to bottom
-                    .show(ui, |ui| {
-                        ui.add(
-                            egui::TextEdit::multiline(&mut self.log_buffer)
-                                .desired_width(f32::INFINITY)
-                                .desired_rows(10)
-                                .font(egui::TextStyle::Monospace)
-                                .interactive(false) // Read-only
-                        );
-                    });
+                ui.add_space(5.0);
+                egui::Frame::canvas(ui.style()).stroke(egui::Stroke::new(1.0, egui::Color32::BLACK)).show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                        .stick_to_bottom(true)
+                        .max_height(150.0) // Limit height
+                        .show(ui, |ui| {
+                            ui.add(
+                                egui::TextEdit::multiline(&mut self.log_buffer)
+                                    .desired_width(f32::INFINITY)
+                                    .font(egui::TextStyle::Monospace)
+                                    .frame(false) // No internal frame, we used external
+                                    .interactive(false)
+                            );
+                        });
+                });
             }
         });
 
