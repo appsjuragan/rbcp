@@ -12,8 +12,8 @@ use crate::stats::Statistics;
 use crate::utils::{Logger, matches_pattern, secure_remove_dir_all, securely_delete_file};
 
 pub fn copy_directory(
-    src_dir: &Path,
-    dst_dir: &Path,
+    src_path: &Path,
+    dst_path: &Path,
     options: &CopyOptions,
     logger: &Logger,
     stats: &Statistics,
@@ -25,16 +25,52 @@ pub fn copy_directory(
     }
     progress.wait_if_paused();
 
+    // Handle single file source
+    if src_path.is_file() {
+        let actual_dst = if dst_path.is_dir() {
+            dst_path.join(src_path.file_name().unwrap_or_default())
+        } else {
+            // If destination doesn't exist, check if it looks like a directory (no extension)
+            // or if the user intended it to be a directory.
+            // For simplicity, if we are copying a single file, and dest doesn't exist,
+            // we assume dest is the target filename unless it ends with a separator.
+            // But std::path doesn't easily tell us about trailing separators.
+            // Let's assume it's the full target path.
+            
+            // However, if the user selected a folder as destination in GUI, it's a folder path.
+            // So we should probably try to create it as a directory if it doesn't have an extension?
+            // No, that's risky.
+            
+            // Better heuristic: If we are in "File mode" (source is file), 
+            // and destination is an existing directory, copy into it.
+            // If destination doesn't exist, we treat it as the target file path.
+            // EXCEPT if the user wants to copy file into a new directory.
+            // But usually they would specify the directory.
+            
+            // Let's stick to: if dst exists and is dir, join. Else use as is.
+            dst_path.to_path_buf()
+        };
+
+        // Ensure parent exists
+        if let Some(parent) = actual_dst.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
+        return copy_file(src_path, &actual_dst, options, logger, stats, progress);
+    }
+
     // Ensure the destination directory exists
-    if !dst_dir.exists() {
+    if !dst_path.exists() {
         if !options.list_only {
-            let msg = format!("Creating directory: {}", dst_dir.display());
+            let msg = format!("Creating directory: {}", dst_path.display());
             progress.on_log(&msg);
             logger.log(&msg);
-            fs::create_dir_all(dst_dir)?;
+            fs::create_dir_all(dst_path)?;
             stats.add_dir_created();
         } else {
-            let msg = format!("Would create directory: {}", dst_dir.display());
+            let msg = format!("Would create directory: {}", dst_path.display());
             progress.on_log(&msg);
             logger.log(&msg);
             stats.add_dir_created();
@@ -43,7 +79,7 @@ pub fn copy_directory(
 
     // Collect the source files and directories
     // We collect them into a Vec to enable parallel iteration
-    let entries: Vec<_> = fs::read_dir(src_dir)?.collect::<Result<Vec<_>, io::Error>>()?;
+    let entries: Vec<_> = fs::read_dir(src_path)?.collect::<Result<Vec<_>, io::Error>>()?;
 
     // We need to keep track of source filenames for the purge step
     let src_names: HashSet<String> = entries
@@ -68,11 +104,11 @@ pub fn copy_directory(
                 .any(|p| matches_pattern(&file_name, p));
 
             if matches {
-                let dst_path = dst_dir.join(&file_name);
-                copy_file(&path, &dst_path, options, logger, stats, progress)?;
+                let dst_file_path = dst_path.join(&file_name);
+                copy_file(&path, &dst_file_path, options, logger, stats, progress)?;
             }
         } else if path.is_dir() && options.recursive {
-            let dst_subdir = dst_dir.join(&file_name);
+            let dst_subdir = dst_path.join(&file_name);
 
             // Skip empty directories if not including them
             if !options.include_empty {
@@ -109,7 +145,7 @@ pub fn copy_directory(
 
     // Purge files/directories in destination that don't exist in source
     if (options.purge || options.mirror) && !options.list_only {
-        if let Ok(dst_entries) = fs::read_dir(dst_dir) {
+        if let Ok(dst_entries) = fs::read_dir(dst_path) {
             let dst_entries: Vec<_> = dst_entries.collect::<Result<Vec<_>, io::Error>>()?;
 
             let process_purge = |entry: &fs::DirEntry| -> io::Result<()> {

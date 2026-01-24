@@ -166,9 +166,14 @@ impl eframe::App for RbcpApp {
             });
             
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 70.0));
-                if ui.button("browse").clicked() {
+                ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 140.0));
+                if ui.button("Folder").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
+                        self.source = path.to_string_lossy().to_string();
+                    }
+                }
+                if ui.button("File").clicked() {
+                    if let Some(path) = rfd::FileDialog::new().pick_file() {
                         self.source = path.to_string_lossy().to_string();
                     }
                 }
