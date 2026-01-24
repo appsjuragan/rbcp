@@ -163,7 +163,11 @@ pub fn copy_directory(
     Ok(())
 }
 
-fn should_copy_file(src_meta: &Metadata, dst_meta: Option<&Metadata>) -> bool {
+fn should_copy_file(src_meta: &Metadata, dst_meta: Option<&Metadata>, force_overwrite: bool) -> bool {
+    if force_overwrite {
+        return true;
+    }
+
     if dst_meta.is_none() {
         return true;
     }
@@ -199,7 +203,7 @@ fn copy_file(
     let src_meta = fs::metadata(src_path)?;
     let dst_meta = fs::metadata(dst_path).ok();
 
-    if !should_copy_file(&src_meta, dst_meta.as_ref()) {
+    if !should_copy_file(&src_meta, dst_meta.as_ref(), options.force_overwrite) {
         stats.add_file_skipped();
         return Ok(());
     }

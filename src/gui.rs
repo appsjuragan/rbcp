@@ -29,6 +29,7 @@ struct RbcpApp {
     engine_thread: Option<thread::JoinHandle<()>>,
     show_log: bool,
     show_options: bool,
+    show_confirmation: bool,
     
     // Log buffer for display
     log_buffer: String,
@@ -47,6 +48,7 @@ impl RbcpApp {
             engine_thread: None,
             show_log: true,
             show_options: false,
+            show_confirmation: false, // New state
             log_buffer: String::new(),
         }
     }
@@ -57,6 +59,16 @@ impl RbcpApp {
             return;
         }
 
+        // Check if destination exists
+        if std::path::Path::new(&self.destination).exists() {
+            self.show_confirmation = true;
+            return;
+        }
+
+        self.run_copy_engine();
+    }
+
+    fn run_copy_engine(&mut self) {
         let mut options = self.copy_options.clone();
         options.source = self.source.clone();
         options.destination = self.destination.clone();
@@ -147,7 +159,9 @@ impl eframe::App for RbcpApp {
             ui.add_space(5.0);
 
             // Progress Section
-            if info.state != ProgressState::Idle {
+            let show_progress = matches!(info.state, ProgressState::Scanning | ProgressState::Copying | ProgressState::Paused);
+            
+            if show_progress {
                 ui.label(egui::RichText::new("Progress:").color(purple_color));
                 
                 let pct = info.percentage() / 100.0;
@@ -177,8 +191,6 @@ impl eframe::App for RbcpApp {
                 // Placeholder space to prevent layout jumpiness if desired, or just nothing
                 ui.add_space(20.0); // Minimal spacing
             }
-            
-
 
             ui.add_space(10.0);
             ui.separator();
@@ -251,6 +263,35 @@ impl eframe::App for RbcpApp {
                 });
             }
         });
+
+        // Confirmation Modal
+        if self.show_confirmation {
+            egui::Window::new("Confirmation")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.label("Destination directory already exists.");
+                    ui.label("What would you like to do?");
+                    ui.add_space(10.0);
+                    
+                    if ui.button("Overwrite All").clicked() {
+                        self.copy_options.force_overwrite = true;
+                        self.show_confirmation = false;
+                        self.run_copy_engine();
+                    }
+                    
+                    if ui.button("Overwrite File (Update)").clicked() {
+                        self.copy_options.force_overwrite = false;
+                        self.show_confirmation = false;
+                        self.run_copy_engine();
+                    }
+                    
+                    if ui.button("Cancel").clicked() {
+                        self.show_confirmation = false;
+                    }
+                });
+        }
 
         // Options Window
         if self.show_options {

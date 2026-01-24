@@ -26,6 +26,7 @@ pub struct CopyOptions {
     pub empty_files: bool,
     pub child_only: bool,
     pub shred_files: bool,
+    pub force_overwrite: bool,
 }
 
 impl Default for CopyOptions {
@@ -54,6 +55,7 @@ impl Default for CopyOptions {
             empty_files: false,
             child_only: false,
             shred_files: false,
+            force_overwrite: false,
         }
     }
 }
