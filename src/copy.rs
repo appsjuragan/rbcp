@@ -28,11 +28,15 @@ pub fn copy_directory(
     // Ensure the destination directory exists
     if !dst_dir.exists() {
         if !options.list_only {
-            logger.log(&format!("Creating directory: {}", dst_dir.display()));
+            let msg = format!("Creating directory: {}", dst_dir.display());
+            progress.on_log(&msg);
+            logger.log(&msg);
             fs::create_dir_all(dst_dir)?;
             stats.add_dir_created();
         } else {
-            logger.log(&format!("Would create directory: {}", dst_dir.display()));
+            let msg = format!("Would create directory: {}", dst_dir.display());
+            progress.on_log(&msg);
+            logger.log(&msg);
             stats.add_dir_created();
         }
     }
@@ -75,7 +79,9 @@ pub fn copy_directory(
                 let is_empty = path.read_dir()?.next().is_none();
                 if is_empty {
                     if options.log_file_names {
-                        logger.log(&format!("Skipping empty directory: {}", path.display()));
+                        let msg = format!("Skipping empty directory: {}", path.display());
+                        progress.on_log(&msg);
+                        logger.log(&msg);
                     }
                     stats.add_dir_skipped();
                     return Ok(());
@@ -117,19 +123,27 @@ pub fn copy_directory(
                 if !src_names.contains(&file_name) {
                     if path.is_file() {
                         if options.shred_files {
-                            logger.log(&format!("Securely removing file: {}", path.display()));
+                            let msg = format!("Securely removing file: {}", path.display());
+                            progress.on_log(&msg);
+                            logger.log(&msg);
                             securely_delete_file(&path, logger)?;
                         } else {
-                            logger.log(&format!("Removing file: {}", path.display()));
+                            let msg = format!("Removing file: {}", path.display());
+                            progress.on_log(&msg);
+                            logger.log(&msg);
                             fs::remove_file(&path)?;
                         }
                         stats.add_file_removed();
                     } else if path.is_dir() {
                         if options.shred_files {
-                            logger.log(&format!("Securely removing directory: {}", path.display()));
+                            let msg = format!("Securely removing directory: {}", path.display());
+                            progress.on_log(&msg);
+                            logger.log(&msg);
                             secure_remove_dir_all(&path, logger)?;
                         } else {
-                            logger.log(&format!("Removing directory: {}", path.display()));
+                            let msg = format!("Removing directory: {}", path.display());
+                            progress.on_log(&msg);
+                            logger.log(&msg);
                             fs::remove_dir_all(&path)?;
                         }
                         stats.add_dir_removed();
@@ -191,21 +205,25 @@ fn copy_file(
     }
 
     if options.list_only {
-        logger.log(&format!(
+        let msg = format!(
             "Would copy file: {} -> {}",
             src_path.display(),
             dst_path.display()
-        ));
+        );
+        progress.on_log(&msg);
+        logger.log(&msg);
         stats.add_file_copied(src_meta.len());
         return Ok(());
     }
 
     if options.log_file_names {
-        logger.log(&format!(
+        let msg = format!(
             "Copying file: {} -> {}",
             src_path.display(),
             dst_path.display()
-        ));
+        );
+        progress.on_log(&msg);
+        logger.log(&msg);
     }
 
     let mut retry_count = 0;

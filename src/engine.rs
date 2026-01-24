@@ -237,22 +237,35 @@ impl CopyEngine {
         let mut bytes = 0;
         
         if path.is_dir() {
-            for entry in fs::read_dir(path)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_dir() {
-                    if self.options.recursive {
-                        let (f, b) = self.scan_source(&path)?;
-                        files += f;
-                        bytes += b;
+            let entries = match fs::read_dir(path) {
+                Ok(e) => e,
+                Err(e) => {
+                    // Log error but don't fail the entire scan
+                    self.progress.on_log(&format!("Warning: Could not scan directory {}: {}", path.display(), e));
+                    return Ok((0, 0));
+                }
+            };
+
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        if self.options.recursive {
+                            if let Ok((f, b)) = self.scan_source(&path) {
+                                files += f;
+                                bytes += b;
+                            }
+                        }
+                    } else {
+                         let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+                         let matches = self.options.patterns.iter().any(|p| crate::utils::matches_pattern(&file_name, p));
+                         if matches {
+                             files += 1;
+                             if let Ok(metadata) = fs::metadata(&path) {
+                                bytes += metadata.len();
+                             }
+                         }
                     }
-                } else {
-                     let file_name = path.file_name().unwrap().to_string_lossy();
-                     let matches = self.options.patterns.iter().any(|p| crate::utils::matches_pattern(&file_name, p));
-                     if matches {
-                         files += 1;
-                         bytes += fs::metadata(&path)?.len();
-                     }
                 }
             }
         } else if path.is_file() {
