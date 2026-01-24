@@ -2,27 +2,21 @@ use std::sync::Arc;
 use rbcp::{CopyOptions, CopyEngine, CliProgress};
 use rbcp::args::print_usage;
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Check if we should launch GUI (no args provided)
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() <= 1 {
+        rbcp::run_gui()?;
+        return Ok(());
+    }
+
     // Parse command line arguments
     let options = match CopyOptions::parse() {
         Ok(opts) => opts,
         Err(e) => {
             if e == "Not enough arguments" {
-                let args: Vec<String> = std::env::args().collect();
-                // If no args, we might want to launch GUI in the future.
-                // For now, just print usage as before.
-                // But wait, the requirement is "add gui capability when it available (desktop mode) without losing cli capability"
-                // So if no args are provided, we should probably launch GUI.
-                // But for this step (Phase 1/2), I'll stick to CLI behavior or maybe detect if I should launch GUI?
-                // The plan says: "main.rs checks if args provided -> CLI mode. No args -> GUI mode."
-                
-                // Let's check if we have any args other than program name
-                if args.len() <= 1 {
-                    // TODO: Launch GUI here in Phase 3
-                    print_usage(&args[0]);
-                    return Ok(());
-                }
-                
+                // This case is technically unreachable now due to check above,
+                // but CopyOptions::parse might still return it if logic changes.
                 print_usage(&args[0]);
                 return Ok(());
             }

@@ -218,6 +218,10 @@ impl SharedProgress {
         self.pause_flag.store(paused, Ordering::Relaxed);
     }
 
+    pub fn is_paused(&self) -> bool {
+        self.pause_flag.load(Ordering::Relaxed)
+    }
+
     /// Get the current progress info
     pub fn get_info(&self) -> ProgressInfo {
         self.info.lock().unwrap().clone()

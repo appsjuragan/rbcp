@@ -17,6 +17,9 @@ pub use progress::{ProgressCallback, ProgressInfo, ProgressState, NullProgress, 
 pub use stats::Statistics;
 pub use utils::Logger;
 
+pub mod gui;
+pub use gui::run_gui;
+
 /// Application version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
