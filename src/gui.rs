@@ -71,7 +71,21 @@ impl RbcpApp {
     fn run_copy_engine(&mut self) {
         let mut options = self.copy_options.clone();
         options.source = self.source.clone();
-        options.destination = self.destination.clone();
+        
+        // User request: "when source path is a folder, copy the folder not folder content"
+        // So we append the source folder name to the destination.
+        let source_path = std::path::Path::new(&self.source);
+        if source_path.is_dir() {
+            if let Some(folder_name) = source_path.file_name() {
+                let new_dest = std::path::Path::new(&self.destination).join(folder_name);
+                options.destination = new_dest.to_string_lossy().to_string();
+            } else {
+                 options.destination = self.destination.clone();
+            }
+        } else {
+            options.destination = self.destination.clone();
+        }
+
         options.show_progress = true; // Force progress for GUI
         
         // Default pattern if none specified
@@ -183,6 +197,14 @@ impl eframe::App for RbcpApp {
                     } else {
                         ui.label(egui::RichText::new("0 of 0 objects").color(purple_color));
                     }
+                    
+                    // Speed
+                    if info.speed > 0 {
+                        let speed_mb = info.speed as f64 / 1_048_576.0;
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(egui::RichText::new(format!("{:.2} MB/s", speed_mb)).color(purple_color));
+                        });
+                    }
                 });
                 
                 // Current file path
@@ -199,7 +221,11 @@ impl eframe::App for RbcpApp {
             ui.horizontal(|ui| {
                 // Show log checkbox (Left)
                 if ui.checkbox(&mut self.show_log, "Show log").changed() {
-                    // Toggle logic handled by state
+                    if self.show_log {
+                         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([600.0, 500.0].into()));
+                    } else {
+                         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([600.0, 280.0].into()));
+                    }
                 }
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

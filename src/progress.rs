@@ -45,8 +45,9 @@ pub struct ProgressInfo {
     pub current_file_bytes_done: u64,
     /// Current file's total bytes
     pub current_file_bytes_total: u64,
+    /// Current speed in bytes per second
+    pub speed: u64,
 }
-
 impl Default for ProgressInfo {
     fn default() -> Self {
         Self {
@@ -58,6 +59,7 @@ impl Default for ProgressInfo {
             bytes_total: 0,
             current_file_bytes_done: 0,
             current_file_bytes_total: 0,
+            speed: 0,
         }
     }
 }

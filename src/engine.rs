@@ -119,6 +119,7 @@ impl CopyEngine {
             stats: &'a Statistics,
             total_files: u64,
             total_bytes: u64,
+            start_time: SystemTime,
         }
 
         impl<'a> ProgressCallback for ProgressWrapper<'a> {
@@ -132,10 +133,19 @@ impl CopyEngine {
                 new_info.files_done = files_done;
                 
                 // Total bytes done = bytes of fully copied files + bytes of current file
-                new_info.bytes_done = bytes_done + info.current_file_bytes_done;
+                let total_bytes_done = bytes_done + info.current_file_bytes_done;
+                new_info.bytes_done = total_bytes_done;
                 
                 new_info.files_total = self.total_files;
                 new_info.bytes_total = self.total_bytes;
+                
+                // Calculate speed
+                if let Ok(duration) = SystemTime::now().duration_since(self.start_time) {
+                    let secs = duration.as_secs_f64();
+                    if secs > 0.0 {
+                        new_info.speed = (total_bytes_done as f64 / secs) as u64;
+                    }
+                }
                 
                 self.inner.on_progress(&new_info);
             }
@@ -150,6 +160,7 @@ impl CopyEngine {
             stats: &self.stats,
             total_files,
             total_bytes,
+            start_time,
         };
 
         // Handle child-only mode
