@@ -39,7 +39,10 @@ impl RbcpApp {
         Self {
             source: String::new(),
             destination: String::new(),
-            copy_options: CopyOptions::default(),
+            copy_options: CopyOptions {
+                recursive: true, // Default to recursive for GUI
+                ..CopyOptions::default()
+            },
             progress: SharedProgress::new(),
             engine_thread: None,
             show_log: true,
@@ -243,7 +246,11 @@ impl eframe::App for RbcpApp {
                 .open(&mut self.show_options)
                 .show(ctx, |ui| {
                     ui.checkbox(&mut self.copy_options.recursive, "Recursive (/S)");
-                    ui.checkbox(&mut self.copy_options.include_empty, "Include Empty (/E)");
+                    if ui.checkbox(&mut self.copy_options.include_empty, "Include Empty (/E)").changed() {
+                        if self.copy_options.include_empty {
+                            self.copy_options.recursive = true;
+                        }
+                    }
                     ui.checkbox(&mut self.copy_options.mirror, "Mirror (/MIR)");
                     ui.checkbox(&mut self.copy_options.purge, "Purge (/PURGE)");
                     ui.checkbox(&mut self.copy_options.move_files, "Move Files (/MOV)");
