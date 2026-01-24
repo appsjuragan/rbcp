@@ -2,7 +2,7 @@ use std::env;
 
 #[derive(Debug, Clone)]
 pub struct CopyOptions {
-    pub source: String,
+    pub sources: Vec<String>,
     pub destination: String,
     pub patterns: Vec<String>,
     
@@ -32,7 +32,7 @@ pub struct CopyOptions {
 impl Default for CopyOptions {
     fn default() -> Self {
         CopyOptions {
-            source: String::new(),
+            sources: Vec::new(),
             destination: String::new(),
             patterns: Vec::new(),
             recursive: false,
@@ -134,7 +134,7 @@ impl CopyOptions {
             return Err("Missing source or destination".to_string());
         }
 
-        options.source = positional_args[0].clone();
+        options.sources = vec![positional_args[0].clone()];
         options.destination = positional_args[1].clone();
 
         // Any remaining positional args are patterns

@@ -56,20 +56,22 @@ impl RbcpApp {
     }
 
     fn start_copy(&mut self) {
-        if self.source.is_empty() || self.destination.is_empty() {
-            // TODO: Show error
+        let sources: Vec<String> = self.source.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        if sources.is_empty() || self.destination.is_empty() {
             return;
         }
 
         // Calculate effective destination
         let mut effective_dest = self.destination.clone();
-        let source_path = std::path::Path::new(&self.source);
-        if source_path.is_dir() {
-            if let Some(folder_name) = source_path.file_name() {
-                effective_dest = std::path::Path::new(&self.destination)
-                    .join(folder_name)
-                    .to_string_lossy()
-                    .to_string();
+        if sources.len() == 1 {
+            let source_path = std::path::Path::new(&sources[0]);
+            if source_path.is_dir() {
+                if let Some(folder_name) = source_path.file_name() {
+                    effective_dest = std::path::Path::new(&self.destination)
+                        .join(folder_name)
+                        .to_string_lossy()
+                        .to_string();
+                }
             }
         }
 
@@ -84,7 +86,7 @@ impl RbcpApp {
 
     fn run_copy_engine(&mut self, destination: String) {
         let mut options = self.copy_options.clone();
-        options.source = self.source.clone();
+        options.sources = self.source.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
         options.destination = destination;
         options.show_progress = true; // Force progress for GUI
         
@@ -180,9 +182,10 @@ impl eframe::App for RbcpApp {
                             ui.close();
                         }
                     }
-                    if ui.button("Select File").clicked() {
-                        if let Some(path) = rfd::FileDialog::new().pick_file() {
-                            self.source = path.to_string_lossy().to_string();
+                    if ui.button("Select File(s)").clicked() {
+                        if let Some(paths) = rfd::FileDialog::new().pick_files() {
+                            let path_strings: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
+                            self.source = path_strings.join("; ");
                             self.progress.reset();
                             self.log_buffer.clear();
                             ui.close();
@@ -351,13 +354,18 @@ impl eframe::App for RbcpApp {
                     
                     // Recalculate effective destination
                     let mut effective_dest = self.destination.clone();
-                    let source_path = std::path::Path::new(&self.source);
-                    if source_path.is_dir() {
-                        if let Some(folder_name) = source_path.file_name() {
-                            effective_dest = std::path::Path::new(&self.destination)
-                                .join(folder_name)
-                                .to_string_lossy()
-                                .to_string();
+                    let sources: Vec<String> = self.source.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                    
+                    // If only one source and it's a directory, we might want to append its name
+                    if sources.len() == 1 {
+                        let source_path = std::path::Path::new(&sources[0]);
+                        if source_path.is_dir() {
+                            if let Some(folder_name) = source_path.file_name() {
+                                effective_dest = std::path::Path::new(&self.destination)
+                                    .join(folder_name)
+                                    .to_string_lossy()
+                                    .to_string();
+                            }
                         }
                     }
                     

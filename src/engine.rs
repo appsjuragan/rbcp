@@ -8,7 +8,7 @@ use crate::args::CopyOptions;
 use crate::progress::{ProgressCallback, ProgressInfo, ProgressState};
 use crate::stats::Statistics;
 use crate::utils::{Logger, format_time};
-use crate::copy::copy_directory;
+
 
 pub struct CopyEngine {
     options: CopyOptions,
@@ -26,16 +26,17 @@ impl CopyEngine {
     }
 
     pub fn run(&self) -> std::io::Result<Arc<Statistics>> {
-        let source_dir = &self.options.source;
         let dest_dir = &self.options.destination;
-        let source_path = Path::new(source_dir);
         let dest_path = Path::new(dest_dir);
 
-        // Check if source directory exists
-        if !source_path.exists() {
-            let msg = format!("ERROR: Source directory does not exist: {}", source_dir);
-            self.progress.on_log(&msg);
-            return Err(std::io::Error::new(std::io::ErrorKind::NotFound, msg));
+        // Check if source paths exist
+        for source_dir in &self.options.sources {
+            let source_path = Path::new(source_dir);
+            if !source_path.exists() {
+                let msg = format!("ERROR: Source path does not exist: {}", source_dir);
+                self.progress.on_log(&msg);
+                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, msg));
+            }
         }
 
         // Configure thread pool if needed
@@ -56,15 +57,13 @@ impl CopyEngine {
         // Log start message
         let start_time = SystemTime::now();
         let start_msg = format!(
-            "-------------------------------------------------------------------------------\n\
-             RBCP - Started: {}\n\
-             Source: {}\n\
+            "RBCP - Started: {}\n\
+             Sources: {}\n\
              Destination: {}\n\
              Patterns: {}\n\
-             Options: {}\n\
-             -------------------------------------------------------------------------------\n",
+             Options: {}\n",
             format_time(start_time),
-            source_dir,
+            self.options.sources.join(", "),
             dest_dir,
             self.options.patterns.join(" "),
             self.options.to_string_flags()
@@ -81,13 +80,16 @@ impl CopyEngine {
              info.state = ProgressState::Scanning;
              self.progress.on_progress(&info);
              
-             if let Ok((files, bytes)) = self.scan_source(source_path) {
-                 total_files = files;
-                 total_bytes = bytes;
-                 info.files_total = files;
-                 info.bytes_total = bytes;
-                 self.progress.on_progress(&info);
+             for source_dir in &self.options.sources {
+                 let source_path = Path::new(source_dir);
+                 if let Ok((files, bytes)) = self.scan_source(source_path) {
+                     total_files += files;
+                     total_bytes += bytes;
+                 }
              }
+             info.files_total = total_files;
+             info.bytes_total = total_bytes;
+             self.progress.on_progress(&info);
         }
 
         // Create destination directory if it doesn't exist
@@ -164,39 +166,47 @@ impl CopyEngine {
         };
 
         // Handle child-only mode
-        if self.options.child_only && source_path.is_dir() {
-             if let Ok(entries) = fs::read_dir(source_path) {
-                let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
-                
-                use rayon::prelude::*;
-                
-                let process_child = |entry: &fs::DirEntry| -> std::io::Result<()> {
-                    let child_path = entry.path();
-                    if child_path.is_dir() {
-                        let child_name = child_path
-                            .file_name()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string();
-                        let child_dest = dest_path.join(&child_name);
+        if self.options.child_only {
+            for source_dir in &self.options.sources {
+                let source_path = Path::new(source_dir);
+                if source_path.is_dir() {
+                    if let Ok(entries) = fs::read_dir(source_path) {
+                        let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
+                        
+                        use rayon::prelude::*;
+                        
+                        let process_child = |entry: &fs::DirEntry| -> std::io::Result<()> {
+                            let child_path = entry.path();
+                            if child_path.is_dir() {
+                                let child_name = child_path
+                                    .file_name()
+                                    .unwrap_or_default()
+                                    .to_string_lossy()
+                                    .to_string();
+                                let child_dest = dest_path.join(&child_name);
 
-                        let msg = format!("\nProcessing child directory: {}", child_name);
-                        self.progress.on_log(&msg);
-                        logger.log(&msg);
+                                let msg = format!("\nProcessing child directory: {}", child_name);
+                                self.progress.on_log(&msg);
+                                logger.log(&msg);
 
-                        copy_directory(&child_path, &child_dest, &self.options, &logger, &self.stats, &wrapper)?;
+                                crate::copy::copy_directory(&child_path, &child_dest, &self.options, &logger, &self.stats, &wrapper)?;
+                            }
+                            Ok(())
+                        };
+
+                        if self.options.threads > 1 {
+                            entries.par_iter().try_for_each(process_child)?;
+                        } else {
+                            entries.iter().try_for_each(process_child)?;
+                        }
                     }
-                    Ok(())
-                };
-
-                if self.options.threads > 1 {
-                    entries.par_iter().try_for_each(process_child)?;
-                } else {
-                    entries.iter().try_for_each(process_child)?;
                 }
             }
         } else {
-            copy_directory(source_path, dest_path, &self.options, &logger, &self.stats, &wrapper)?;
+            for source_dir in &self.options.sources {
+                let source_path = Path::new(source_dir);
+                crate::copy::copy_directory(source_path, dest_path, &self.options, &logger, &self.stats, &wrapper)?;
+            }
         }
 
         // Log completion
@@ -205,9 +215,8 @@ impl CopyEngine {
         
         use std::sync::atomic::Ordering;
         let summary = format!(
-            "-------------------------------------------------------------------------------\n\
-             RBCP - Finished: {}\n\
-             Source: {}\n\
+            "RBCP - Finished: {}\n\
+             Sources: {}\n\
              Destination: {}\n\n\
              Statistics:\n\
                  Directories: {}\n\
@@ -218,10 +227,9 @@ impl CopyEngine {
                  Files failed: {}\n\
                  Directories removed: {}\n\
                  Files removed: {}\n\n\
-             Elapsed time: {} seconds\n\
-             -------------------------------------------------------------------------------\n",
+             Elapsed time: {} seconds\n",
             format_time(end_time),
-            source_dir,
+            self.options.sources.join(", "),
             dest_dir,
             self.stats.dirs_created.load(Ordering::Relaxed),
             self.stats.files_copied.load(Ordering::Relaxed),
