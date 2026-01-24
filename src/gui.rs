@@ -147,31 +147,38 @@ impl eframe::App for RbcpApp {
             ui.add_space(5.0);
 
             // Progress Section
-            ui.label(egui::RichText::new("Progress:").color(purple_color));
-            
-            let pct = info.percentage() / 100.0;
-            let progress_text = format!("{:.0}%", info.percentage());
-            
-            let progress_bar = egui::ProgressBar::new(pct)
-                .text(egui::RichText::new(progress_text).color(purple_color))
-                .fill(purple_color)
-                .animate(info.state == ProgressState::Scanning);
-            
-            ui.add(progress_bar);
+            if info.state != ProgressState::Idle {
+                ui.label(egui::RichText::new("Progress:").color(purple_color));
+                
+                let pct = info.percentage() / 100.0;
+                let progress_text = format!("{:.0}%", info.percentage());
+                
+                let progress_bar = egui::ProgressBar::new(pct)
+                    .text(egui::RichText::new(progress_text).color(purple_color))
+                    .fill(purple_color)
+                    .animate(info.state == ProgressState::Scanning);
+                
+                ui.add(progress_bar);
 
-            // Status Text
-            ui.horizontal(|ui| {
-                if info.state == ProgressState::Scanning {
-                    ui.label(egui::RichText::new(format!("Scanning... {} files found", info.files_total)).color(purple_color));
-                } else if info.files_total > 0 {
-                    ui.label(egui::RichText::new(format!("{} of {} objects", info.files_done, info.files_total)).color(purple_color));
-                } else {
-                    ui.label(egui::RichText::new("0 of 0 objects").color(purple_color));
-                }
-            });
+                // Status Text
+                ui.horizontal(|ui| {
+                    if info.state == ProgressState::Scanning {
+                        ui.label(egui::RichText::new(format!("Scanning... {} files found", info.files_total)).color(purple_color));
+                    } else if info.files_total > 0 {
+                        ui.label(egui::RichText::new(format!("{} of {} objects", info.files_done, info.files_total)).color(purple_color));
+                    } else {
+                        ui.label(egui::RichText::new("0 of 0 objects").color(purple_color));
+                    }
+                });
+                
+                // Current file path
+                ui.label(egui::RichText::new(&info.current_file).weak().size(12.0));
+            } else {
+                // Placeholder space to prevent layout jumpiness if desired, or just nothing
+                ui.add_space(20.0); // Minimal spacing
+            }
             
-            // Current file path
-            ui.label(egui::RichText::new(&info.current_file).weak().size(12.0));
+
 
             ui.add_space(10.0);
             ui.separator();
