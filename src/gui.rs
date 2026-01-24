@@ -59,33 +59,31 @@ impl RbcpApp {
             return;
         }
 
+        // Calculate effective destination
+        let mut effective_dest = self.destination.clone();
+        let source_path = std::path::Path::new(&self.source);
+        if source_path.is_dir() {
+            if let Some(folder_name) = source_path.file_name() {
+                effective_dest = std::path::Path::new(&self.destination)
+                    .join(folder_name)
+                    .to_string_lossy()
+                    .to_string();
+            }
+        }
+
         // Check if destination exists
-        if std::path::Path::new(&self.destination).exists() {
+        if std::path::Path::new(&effective_dest).exists() {
             self.show_confirmation = true;
             return;
         }
 
-        self.run_copy_engine();
+        self.run_copy_engine(effective_dest);
     }
 
-    fn run_copy_engine(&mut self) {
+    fn run_copy_engine(&mut self, destination: String) {
         let mut options = self.copy_options.clone();
         options.source = self.source.clone();
-        
-        // User request: "when source path is a folder, copy the folder not folder content"
-        // So we append the source folder name to the destination.
-        let source_path = std::path::Path::new(&self.source);
-        if source_path.is_dir() {
-            if let Some(folder_name) = source_path.file_name() {
-                let new_dest = std::path::Path::new(&self.destination).join(folder_name);
-                options.destination = new_dest.to_string_lossy().to_string();
-            } else {
-                 options.destination = self.destination.clone();
-            }
-        } else {
-            options.destination = self.destination.clone();
-        }
-
+        options.destination = destination;
         options.show_progress = true; // Force progress for GUI
         
         // Default pattern if none specified
@@ -173,45 +171,44 @@ impl eframe::App for RbcpApp {
             ui.add_space(5.0);
 
             // Progress Section
-            let show_progress = matches!(info.state, ProgressState::Scanning | ProgressState::Copying | ProgressState::Paused);
+            ui.label(egui::RichText::new("Progress:").color(purple_color));
             
-            if show_progress {
-                ui.label(egui::RichText::new("Progress:").color(purple_color));
-                
-                let pct = info.percentage() / 100.0;
-                let progress_text = format!("{:.0}%", info.percentage());
-                
-                let progress_bar = egui::ProgressBar::new(pct)
-                    .text(egui::RichText::new(progress_text).color(purple_color))
-                    .fill(purple_color)
-                    .animate(info.state == ProgressState::Scanning);
-                
-                ui.add(progress_bar);
+            let pct = if info.state == ProgressState::Idle { 0.0 } else { info.percentage() / 100.0 };
+            let progress_text = if info.state == ProgressState::Idle { "".to_string() } else { format!("{:.0}%", info.percentage()) };
+            
+            let progress_bar = egui::ProgressBar::new(pct)
+                .text(egui::RichText::new(progress_text).color(purple_color))
+                .fill(purple_color)
+                .animate(info.state == ProgressState::Scanning);
+            
+            ui.add(progress_bar);
 
-                // Status Text
-                ui.horizontal(|ui| {
-                    if info.state == ProgressState::Scanning {
-                        ui.label(egui::RichText::new(format!("Scanning... {} files found", info.files_total)).color(purple_color));
-                    } else if info.files_total > 0 {
-                        ui.label(egui::RichText::new(format!("{} of {} objects", info.files_done, info.files_total)).color(purple_color));
-                    } else {
-                        ui.label(egui::RichText::new("0 of 0 objects").color(purple_color));
-                    }
-                    
-                    // Speed
-                    if info.speed > 0 {
-                        let speed_mb = info.speed as f64 / 1_048_576.0;
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.label(egui::RichText::new(format!("{:.2} MB/s", speed_mb)).color(purple_color));
-                        });
-                    }
-                });
+            // Status Text
+            ui.horizontal(|ui| {
+                if info.state == ProgressState::Scanning {
+                    ui.label(egui::RichText::new(format!("Scanning... {} files found", info.files_total)).color(purple_color));
+                } else if info.files_total > 0 {
+                    ui.label(egui::RichText::new(format!("{} of {} objects", info.files_done, info.files_total)).color(purple_color));
+                } else if info.state == ProgressState::Idle || info.state == ProgressState::Completed {
+                    ui.label("");
+                } else {
+                    ui.label(egui::RichText::new("0 of 0 objects").color(purple_color));
+                }
                 
-                // Current file path
+                // Speed
+                if info.speed > 0 && matches!(info.state, ProgressState::Copying) {
+                    let speed_mb = info.speed as f64 / 1_048_576.0;
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(egui::RichText::new(format!("{:.2} MB/s", speed_mb)).color(purple_color));
+                    });
+                }
+            });
+            
+            // Current file path
+            if info.state != ProgressState::Idle && info.state != ProgressState::Completed {
                 ui.label(egui::RichText::new(&info.current_file).weak().size(12.0));
             } else {
-                // Placeholder space to prevent layout jumpiness if desired, or just nothing
-                ui.add_space(20.0); // Minimal spacing
+                ui.label("");
             }
 
             ui.add_space(10.0);
@@ -301,16 +298,28 @@ impl eframe::App for RbcpApp {
                     ui.label("What would you like to do?");
                     ui.add_space(10.0);
                     
+                    // Recalculate effective destination
+                    let mut effective_dest = self.destination.clone();
+                    let source_path = std::path::Path::new(&self.source);
+                    if source_path.is_dir() {
+                        if let Some(folder_name) = source_path.file_name() {
+                            effective_dest = std::path::Path::new(&self.destination)
+                                .join(folder_name)
+                                .to_string_lossy()
+                                .to_string();
+                        }
+                    }
+                    
                     if ui.button("Overwrite All").clicked() {
                         self.copy_options.force_overwrite = true;
                         self.show_confirmation = false;
-                        self.run_copy_engine();
+                        self.run_copy_engine(effective_dest.clone());
                     }
                     
                     if ui.button("Overwrite File (Update)").clicked() {
                         self.copy_options.force_overwrite = false;
                         self.show_confirmation = false;
-                        self.run_copy_engine();
+                        self.run_copy_engine(effective_dest.clone());
                     }
                     
                     if ui.button("Cancel").clicked() {
