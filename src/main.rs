@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::sync::Arc;
 use rbcp::{CopyOptions, CopyEngine, CliProgress};
 use rbcp::args::print_usage;
