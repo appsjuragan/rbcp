@@ -4,13 +4,27 @@
 
 ## Features
 
+*   **Modern GUI**: A beautiful, responsive graphical interface for easy operation.
 *   **Cross-Platform**: Runs natively on Windows, Linux, and macOS.
 *   **Multithreaded Performance**: Utilizes multiple CPU cores for faster file transfers (`/MT`).
 *   **Directory Mirroring**: Synchronize source and destination directories perfectly (`/MIR`).
 *   **Robustness**: Automatic retries for failed copies (`/R`, `/W`) and restartable mode (`/Z`).
 *   **Secure Deletion**: Optional secure shredding of deleted files (`/SHRED`).
 *   **Advanced Filtering**: Include/exclude files based on patterns and attributes.
-*   **Detailed Logging**: Comprehensive operation logs and statistics.
+*   **Real-time Progress**: Visual progress bars, speed display (MB/s), and detailed logs.
+*   **Single File Support**: Copy individual files or entire folders seamlessly.
+
+## Graphical User Interface (GUI)
+
+Launch `rbcp` without any command-line arguments to open the GUI.
+
+### GUI Features:
+*   **Dark/Light Mode**: Toggle between themes for comfortable viewing.
+*   **Browse Menu**: Easily select folders or individual files as source.
+*   **Real-time Speed**: Monitor transfer rates in MB/s.
+*   **Overwrite Confirmation**: Safety check when destination directory already exists.
+*   **Log View**: Integrated real-time log viewer with toggle.
+*   **Minimize to Tray**: Keep the application running in the background.
 
 ## Installation
 
