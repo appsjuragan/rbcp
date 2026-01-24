@@ -13,7 +13,7 @@ mod progress;
 
 pub use args::CopyOptions;
 pub use engine::CopyEngine;
-pub use progress::{ProgressCallback, ProgressInfo, ProgressState, NullProgress};
+pub use progress::{ProgressCallback, ProgressInfo, ProgressState, NullProgress, CliProgress, SharedProgress};
 pub use stats::Statistics;
 pub use utils::Logger;
 

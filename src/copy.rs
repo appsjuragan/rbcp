@@ -7,6 +7,7 @@ use std::thread;
 use std::time::{Duration, SystemTime};
 
 use crate::args::CopyOptions;
+use crate::progress::{ProgressCallback, ProgressInfo, ProgressState};
 use crate::stats::Statistics;
 use crate::utils::{Logger, matches_pattern, secure_remove_dir_all, securely_delete_file};
 
@@ -16,7 +17,14 @@ pub fn copy_directory(
     options: &CopyOptions,
     logger: &Logger,
     stats: &Statistics,
+    progress: &dyn ProgressCallback,
 ) -> io::Result<()> {
+    // Check for cancellation
+    if progress.is_cancelled() {
+        return Ok(());
+    }
+    progress.wait_if_paused();
+
     // Ensure the destination directory exists
     if !dst_dir.exists() {
         if !options.list_only {
@@ -34,16 +42,17 @@ pub fn copy_directory(
     let entries: Vec<_> = fs::read_dir(src_dir)?.collect::<Result<Vec<_>, io::Error>>()?;
 
     // We need to keep track of source filenames for the purge step
-    // Since we are inside a function that might be running in parallel (if recursive),
-    // we need to be careful. But here we are just reading the current directory.
     let src_names: HashSet<String> = entries
         .iter()
         .map(|e| e.file_name().to_string_lossy().to_string())
         .collect();
 
     // Process entries in parallel if threads > 1, otherwise sequential
-    // We use try_for_each to stop on error (matching original behavior)
     let process_entry = |entry: &fs::DirEntry| -> io::Result<()> {
+        if progress.is_cancelled() {
+            return Ok(());
+        }
+
         let path = entry.path();
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
 
@@ -56,15 +65,13 @@ pub fn copy_directory(
 
             if matches {
                 let dst_path = dst_dir.join(&file_name);
-                copy_file(&path, &dst_path, options, logger, stats)?;
+                copy_file(&path, &dst_path, options, logger, stats, progress)?;
             }
         } else if path.is_dir() && options.recursive {
             let dst_subdir = dst_dir.join(&file_name);
 
             // Skip empty directories if not including them
             if !options.include_empty {
-                // Check if directory is empty
-                // Note: This check is slightly expensive as it opens the dir
                 let is_empty = path.read_dir()?.next().is_none();
                 if is_empty {
                     if options.log_file_names {
@@ -75,7 +82,7 @@ pub fn copy_directory(
                 }
             }
 
-            copy_directory(&path, &dst_subdir, options, logger, stats)?;
+            copy_directory(&path, &dst_subdir, options, logger, stats, progress)?;
 
             // Move (delete source dir) if requested
             if options.move_dirs && !options.list_only {
@@ -100,6 +107,10 @@ pub fn copy_directory(
             let dst_entries: Vec<_> = dst_entries.collect::<Result<Vec<_>, io::Error>>()?;
 
             let process_purge = |entry: &fs::DirEntry| -> io::Result<()> {
+                if progress.is_cancelled() {
+                    return Ok(());
+                }
+
                 let path = entry.path();
                 let file_name = path.file_name().unwrap().to_string_lossy().to_string();
 
@@ -164,15 +175,17 @@ fn copy_file(
     options: &CopyOptions,
     logger: &Logger,
     stats: &Statistics,
+    progress: &dyn ProgressCallback,
 ) -> io::Result<()> {
+    if progress.is_cancelled() {
+        return Ok(());
+    }
+    progress.wait_if_paused();
+
     let src_meta = fs::metadata(src_path)?;
     let dst_meta = fs::metadata(dst_path).ok();
 
     if !should_copy_file(&src_meta, dst_meta.as_ref()) {
-        if options.log_file_names {
-            // logger.log(&format!("Skipping identical file: {}", dst_path.display()));
-            // Robocopy doesn't usually log skipped files unless verbose
-        }
         stats.add_file_skipped();
         return Ok(());
     }
@@ -183,7 +196,7 @@ fn copy_file(
             src_path.display(),
             dst_path.display()
         ));
-        stats.add_file_copied(src_meta.len()); // Count as copied for stats in list mode? Original did.
+        stats.add_file_copied(src_meta.len());
         return Ok(());
     }
 
@@ -197,7 +210,11 @@ fn copy_file(
 
     let mut retry_count = 0;
     loop {
-        match copy_file_content(src_path, dst_path, src_meta.len(), options) {
+        if progress.is_cancelled() {
+            return Ok(());
+        }
+
+        match copy_file_content(src_path, dst_path, src_meta.len(), options, progress) {
             Ok(_) => {
                 // Preserve timestamps
                 if let Ok(src_time) = src_meta.modified() {
@@ -241,7 +258,7 @@ fn copy_file(
                                 }
                             }
 
-                            // Apply using attrib command (simplest way to ensure it works)
+                            // Apply using attrib command
                             let _ = std::process::Command::new("attrib")
                                 .arg(format!("+{}", attributes))
                                 .arg(dst_path.to_string_lossy().to_string())
@@ -298,6 +315,7 @@ fn copy_file_content(
     dst_path: &Path,
     total_size: u64,
     options: &CopyOptions,
+    progress: &dyn ProgressCallback,
 ) -> io::Result<()> {
     if options.empty_files {
         let mut dst_file = File::create(dst_path)?;
@@ -311,13 +329,21 @@ fn copy_file_content(
 
     let mut buffer = [0; BUFFER_SIZE];
     let mut bytes_copied: u64 = 0;
-    let mut last_progress = 0;
-
-    // Only show progress if threads == 1 (to avoid garbled output)
-    // or if we implement a better UI later. For now, matching Robocopy /MT behavior (mostly silent on progress)
-    let show_progress = options.show_progress && options.threads == 1;
+    
+    // Create a local progress info to update
+    let mut progress_info = ProgressInfo {
+        state: ProgressState::Copying,
+        current_file: src_path.to_string_lossy().to_string(),
+        current_file_bytes_total: total_size,
+        ..Default::default()
+    };
 
     loop {
+        if progress.is_cancelled() {
+            return Err(io::Error::new(io::ErrorKind::Interrupted, "Cancelled"));
+        }
+        progress.wait_if_paused();
+
         let bytes_read = src_file.read(&mut buffer)?;
         if bytes_read == 0 {
             break;
@@ -330,19 +356,12 @@ fn copy_file_content(
         }
 
         bytes_copied += bytes_read as u64;
-
-        if show_progress && total_size > 0 {
-            let progress = ((bytes_copied * 100) / total_size) as usize;
-            if progress > last_progress {
-                print!("\rCopying: {}% complete", progress);
-                io::stdout().flush()?;
-                last_progress = progress;
-            }
-        }
-    }
-
-    if show_progress && total_size > 0 {
-        println!("\rCopying: 100% complete");
+        
+        // Update progress
+        // Note: For global progress (files_done, total_bytes_done), we rely on the engine/stats
+        // But here we can report the file progress
+        progress_info.current_file_bytes_done = bytes_copied;
+        progress.on_progress(&progress_info);
     }
 
     dst_file.flush()?;

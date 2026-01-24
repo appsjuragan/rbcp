@@ -147,6 +147,84 @@ impl CopyOptions {
 
         Ok(options)
     }
+
+    pub fn to_string_flags(&self) -> String {
+        let mut result = Vec::new();
+
+        if self.recursive {
+            if self.include_empty {
+                result.push("/E".to_string());
+            } else {
+                result.push("/S".to_string());
+            }
+        }
+
+        if self.restartable {
+            result.push("/Z".to_string());
+        }
+
+        if self.backup_mode {
+            result.push("/B".to_string());
+        }
+
+        if self.mirror {
+            result.push("/MIR".to_string());
+        } else if self.purge {
+            result.push("/PURGE".to_string());
+        }
+
+        if self.move_dirs {
+            result.push("/MOVE".to_string());
+        } else if self.move_files {
+            result.push("/MOV".to_string());
+        }
+
+        if !self.attributes_add.is_empty() {
+            result.push(format!("/A+:{}", self.attributes_add));
+        }
+
+        if !self.attributes_remove.is_empty() {
+            result.push(format!("/A-:{}", self.attributes_remove));
+        }
+
+        if self.threads != 1 {
+            result.push(format!("/MT:{}", self.threads));
+        }
+
+        if self.retries != 1_000_000 {
+            result.push(format!("/R:{}", self.retries));
+        }
+
+        if self.wait_time != 30 {
+            result.push(format!("/W:{}", self.wait_time));
+        }
+
+        if self.list_only {
+            result.push("/L".to_string());
+        }
+
+        if !self.show_progress {
+            result.push("/NP".to_string());
+        }
+
+        if !self.log_file_names {
+            result.push("/NFL".to_string());
+        }
+
+        if self.empty_files {
+            result.push("/EMPTY".to_string());
+        }
+
+        if self.child_only {
+            result.push("/CHILDONLY".to_string());
+        }
+
+        if self.shred_files {
+            result.push("/SHRED".to_string());
+        }
+
+        result.join(" ")
+    }
 }
 
 pub fn print_usage(program_name: &str) {
