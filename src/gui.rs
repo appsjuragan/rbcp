@@ -30,6 +30,7 @@ struct RbcpApp {
     show_log: bool,
     show_options: bool,
     show_confirmation: bool,
+    dark_mode: bool,
     
     // Log buffer for display
     log_buffer: String,
@@ -49,6 +50,7 @@ impl RbcpApp {
             show_log: true,
             show_options: false,
             show_confirmation: false, // New state
+            dark_mode: true, // Default to dark mode
             log_buffer: String::new(),
         }
     }
@@ -112,6 +114,13 @@ impl RbcpApp {
 
 impl eframe::App for RbcpApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Apply theme
+        if self.dark_mode {
+            ctx.set_visuals(egui::Visuals::dark());
+        } else {
+            ctx.set_visuals(egui::Visuals::light());
+        }
+
         // Poll progress updates
         let info = self.progress.get_info();
         
@@ -134,8 +143,16 @@ impl eframe::App for RbcpApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
 
-            // Title
-            ui.heading(format!("RBCP version {}", crate::VERSION));
+            // Title and Theme Toggle
+            ui.horizontal(|ui| {
+                ui.heading(format!("RBCP version {}", crate::VERSION));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let label = if self.dark_mode { "☀ Light Mode" } else { "🌙 Dark Mode" };
+                    if ui.button(label).clicked() {
+                        self.dark_mode = !self.dark_mode;
+                    }
+                });
+            });
             ui.separator();
 
             // Source Section
@@ -176,8 +193,20 @@ impl eframe::App for RbcpApp {
             let pct = if info.state == ProgressState::Idle { 0.0 } else { info.percentage() / 100.0 };
             let progress_text = if info.state == ProgressState::Idle { "".to_string() } else { format!("{:.0}%", info.percentage()) };
             
+            // Invert text color for readability
+            // On purple background (dark), we want white.
+            // On empty background (dark grey in dark mode, white in light mode), we want white (dark mode) or black (light mode).
+            // But the text spans both.
+            // egui doesn't support mixed color text in progress bar easily.
+            // We'll prioritize readability on the filled part (purple) which is usually the focus.
+            // Purple is dark-ish. White text is good.
+            // In light mode, empty bar is white. White text is invisible.
+            // So: Dark Mode -> White text. Light Mode -> Black text (but might be hard to read on purple).
+            // Let's try White for Dark Mode, and maybe Black for Light Mode.
+            let text_color = if self.dark_mode { egui::Color32::WHITE } else { egui::Color32::BLACK };
+
             let progress_bar = egui::ProgressBar::new(pct)
-                .text(egui::RichText::new(progress_text).color(purple_color))
+                .text(egui::RichText::new(progress_text).color(text_color))
                 .fill(purple_color)
                 .animate(info.state == ProgressState::Scanning);
             
