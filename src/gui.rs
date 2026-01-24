@@ -193,21 +193,18 @@ impl eframe::App for RbcpApp {
             let pct = if info.state == ProgressState::Idle { 0.0 } else { info.percentage() / 100.0 };
             let progress_text = if info.state == ProgressState::Idle { "".to_string() } else { format!("{:.0}%", info.percentage()) };
             
-            // Invert text color for readability
-            // On purple background (dark), we want white.
-            // On empty background (dark grey in dark mode, white in light mode), we want white (dark mode) or black (light mode).
-            // But the text spans both.
-            // egui doesn't support mixed color text in progress bar easily.
-            // We'll prioritize readability on the filled part (purple) which is usually the focus.
-            // Purple is dark-ish. White text is good.
-            // In light mode, empty bar is white. White text is invisible.
-            // So: Dark Mode -> White text. Light Mode -> Black text (but might be hard to read on purple).
-            // Let's try White for Dark Mode, and maybe Black for Light Mode.
             let text_color = if self.dark_mode { egui::Color32::WHITE } else { egui::Color32::BLACK };
+            
+            // Hide purple fill when idle or completed
+            let fill_color = if info.state == ProgressState::Idle || info.state == ProgressState::Completed {
+                egui::Color32::TRANSPARENT
+            } else {
+                purple_color
+            };
 
             let progress_bar = egui::ProgressBar::new(pct)
                 .text(egui::RichText::new(progress_text).color(text_color))
-                .fill(purple_color)
+                .fill(fill_color)
                 .animate(info.state == ProgressState::Scanning);
             
             ui.add(progress_bar);
@@ -250,7 +247,8 @@ impl eframe::App for RbcpApp {
                     if self.show_log {
                          ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([600.0, 500.0].into()));
                     } else {
-                         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([600.0, 280.0].into()));
+                         // Increased height to prevent buttons from being hidden
+                         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([600.0, 350.0].into()));
                     }
                 }
 
