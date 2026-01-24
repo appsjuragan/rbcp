@@ -61,6 +61,11 @@ impl RbcpApp {
         options.source = self.source.clone();
         options.destination = self.destination.clone();
         options.show_progress = true; // Force progress for GUI
+        
+        // Default pattern if none specified
+        if options.patterns.is_empty() {
+            options.patterns.push("*".to_string());
+        }
 
         let progress = self.progress.clone();
         progress.reset();
