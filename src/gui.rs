@@ -167,17 +167,24 @@ impl eframe::App for RbcpApp {
             });
             
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 70.0));
+                if ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 70.0)).changed() {
+                    self.progress.reset();
+                    self.log_buffer.clear();
+                }
                 ui.menu_button("browse", |ui| {
                     if ui.button("Select Folder").clicked() {
                         if let Some(path) = rfd::FileDialog::new().pick_folder() {
                             self.source = path.to_string_lossy().to_string();
+                            self.progress.reset();
+                            self.log_buffer.clear();
                             ui.close();
                         }
                     }
                     if ui.button("Select File").clicked() {
                         if let Some(path) = rfd::FileDialog::new().pick_file() {
                             self.source = path.to_string_lossy().to_string();
+                            self.progress.reset();
+                            self.log_buffer.clear();
                             ui.close();
                         }
                     }
@@ -187,10 +194,15 @@ impl eframe::App for RbcpApp {
             // Destination Section
             ui.label(egui::RichText::new("Destination path:").color(purple_color));
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.destination).desired_width(ui.available_width() - 70.0));
+                if ui.add(egui::TextEdit::singleline(&mut self.destination).desired_width(ui.available_width() - 70.0)).changed() {
+                    self.progress.reset();
+                    self.log_buffer.clear();
+                }
                 if ui.button("browse").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.destination = path.to_string_lossy().to_string();
+                        self.progress.reset();
+                        self.log_buffer.clear();
                     }
                 }
             });
@@ -274,7 +286,8 @@ impl eframe::App for RbcpApp {
                              ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
                          }
                     } else {
-                        if ui.add_sized([button_width, button_height], egui::Button::new("Start Copy")).clicked() {
+                        let can_copy = !self.source.is_empty() && !self.destination.is_empty();
+                        if ui.add_enabled(can_copy, egui::Button::new("Start Copy").min_size([button_width, button_height].into())).clicked() {
                             self.start_copy();
                         }
                     }
