@@ -381,11 +381,11 @@ fn copy_file_content(
         return Ok(());
     }
 
-    const BUFFER_SIZE: usize = 64 * 1024;
-    let mut src_file = File::open(src_path)?;
-    let mut dst_file = File::create(dst_path)?;
+    const BUFFER_SIZE: usize = 1024 * 1024; // 1MB buffer for better performance, especially on networks
+    let mut src_file = io::BufReader::with_capacity(BUFFER_SIZE, File::open(src_path)?);
+    let mut dst_file = io::BufWriter::with_capacity(BUFFER_SIZE, File::create(dst_path)?);
 
-    let mut buffer = [0; BUFFER_SIZE];
+    let mut buffer = vec![0; BUFFER_SIZE];
     let mut bytes_copied: u64 = 0;
     
     // Create a local progress info to update
@@ -416,8 +416,6 @@ fn copy_file_content(
         bytes_copied += bytes_read as u64;
         
         // Update progress
-        // Note: For global progress (files_done, total_bytes_done), we rely on the engine/stats
-        // But here we can report the file progress
         progress_info.current_file_bytes_done = bytes_copied;
         progress.on_progress(&progress_info);
     }
