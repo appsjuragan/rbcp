@@ -57,7 +57,7 @@ impl CopyEngine {
         let start_time = SystemTime::now();
         let start_msg = format!(
             "-------------------------------------------------------------------------------\n\
-             ColemenCopy - Started: {}\n\
+             RBCP - Started: {}\n\
              Source: {}\n\
              Destination: {}\n\
              Patterns: {}\n\
@@ -195,7 +195,7 @@ impl CopyEngine {
         use std::sync::atomic::Ordering;
         let summary = format!(
             "-------------------------------------------------------------------------------\n\
-             ColemenCopy - Finished: {}\n\
+             RBCP - Finished: {}\n\
              Source: {}\n\
              Destination: {}\n\n\
              Statistics:\n\
