@@ -141,19 +141,20 @@ impl eframe::App for RbcpApp {
         // let border_color = egui::Color32::BLACK; // Default is fine for now
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+            ui.add_enabled_ui(!self.show_options && !self.show_confirmation, |ui| {
+                ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
 
-            // Title and Theme Toggle
-            ui.horizontal(|ui| {
-                ui.heading(format!("RBCP version {}", crate::VERSION));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let label = if self.dark_mode { "☀ Light Mode" } else { "🌙 Dark Mode" };
-                    if ui.button(label).clicked() {
-                        self.dark_mode = !self.dark_mode;
-                    }
+                // Title and Theme Toggle
+                ui.horizontal(|ui| {
+                    ui.heading(format!("RBCP version {}", crate::VERSION));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let label = if self.dark_mode { "☀ Light Mode" } else { "🌙 Dark Mode" };
+                        if ui.button(label).clicked() {
+                            self.dark_mode = !self.dark_mode;
+                        }
+                    });
                 });
-            });
-            ui.separator();
+                ui.separator();
 
             // Source Section
             ui.horizontal(|ui| {
@@ -166,17 +167,21 @@ impl eframe::App for RbcpApp {
             });
             
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 140.0));
-                if ui.button("Folder").clicked() {
-                    if let Some(path) = rfd::FileDialog::new().pick_folder() {
-                        self.source = path.to_string_lossy().to_string();
+                ui.add(egui::TextEdit::singleline(&mut self.source).desired_width(ui.available_width() - 70.0));
+                ui.menu_button("browse", |ui| {
+                    if ui.button("Select Folder").clicked() {
+                        if let Some(path) = rfd::FileDialog::new().pick_folder() {
+                            self.source = path.to_string_lossy().to_string();
+                            ui.close();
+                        }
                     }
-                }
-                if ui.button("File").clicked() {
-                    if let Some(path) = rfd::FileDialog::new().pick_file() {
-                        self.source = path.to_string_lossy().to_string();
+                    if ui.button("Select File").clicked() {
+                        if let Some(path) = rfd::FileDialog::new().pick_file() {
+                            self.source = path.to_string_lossy().to_string();
+                            ui.close();
+                        }
                     }
-                }
+                });
             });
 
             // Destination Section
@@ -318,6 +323,7 @@ impl eframe::App for RbcpApp {
                 });
             }
         });
+    });
 
         // Confirmation Modal
         if self.show_confirmation {
