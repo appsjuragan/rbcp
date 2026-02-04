@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBCP v2.0.1 Beta</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="dark-theme">
+    <!-- Startup Loader -->
+    <div id="app-loader" class="app-loader">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <div class="loader-text">Loading RBCP v2.0.1 Beta...</div>
+        </div>
+    </div>
+
+    <div class="glass-container">
+        <header>
+            <div class="logo">
+                <span class="icon">🚀</span>
+                <h1>RBCP <span>v2.0.1 Beta</span></h1>
+            </div>
+            <button id="theme-toggle" class="icon-btn">🌙</button>
+        </header>
+
+        <main>
+            <section class="path-inputs">
+                <div class="input-group">
+                    <label>Source Path</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="source-path" placeholder="Select source directory...">
+                        <button id="browse-source" class="browse-btn" title="Select Folder">📁</button>
+                        <button id="browse-files" class="browse-btn" title="Select File(s)">📄</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Destination Path</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="dest-path" placeholder="Select destination directory...">
+                        <button id="browse-dest" class="browse-btn">📁</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="options-collapsible">
+                <button class="collapse-trigger" id="toggle-options">
+                    Advanced Options <span class="arrow">▼</span>
+                </button>
+                <div class="options-content" id="options-panel">
+                    <div class="toggle-grid">
+                        <label class="switch-item">
+                            <input type="checkbox" id="opt-recursive" checked>
+                            <span class="slider"></span>
+                            <span class="label">Recursive (/S)</span>
+                        </label>
+                        <label class="switch-item">
+                            <input type="checkbox" id="opt-mirror">
+                            <span class="slider"></span>
+                            <span class="label">Mirror (/MIR)</span>
+                        </label>
+                        <label class="switch-item">
+                            <input type="checkbox" id="opt-shred">
+                            <span class="slider"></span>
+                            <span class="label">Secure Delete (/SHRED)</span>
+                        </label>
+                        <label class="switch-item">
+                            <input type="checkbox" id="opt-move">
+                            <span class="slider"></span>
+                            <span class="label">Move Files (/MOV)</span>
+                        </label>
+                    </div>
+                    <div class="slider-group">
+                        <label>Thread Count: <span id="thread-val">8</span></label>
+                        <input type="range" id="thread-count" min="1" max="128" value="8">
+                    </div>
+                </div>
+            </section>
+
+            <section class="progress-section">
+                <div class="progress-circle-container">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="fg" id="progress-ring" cx="50" cy="50" r="45"></circle>
+                    </svg>
+                    <div class="progress-center">
+                        <span id="progress-pct">0%</span>
+                        <span class="label">Overall Progress</span>
+                    </div>
+                </div>
+
+                <div class="status-details">
+                    <div id="status-text" class="status-msg">Ready</div>
+                    <div id="current-file" class="current-file">Ready to copy</div>
+                    <div class="stats">
+                        <span id="speed">0 MB/s</span>
+                        <span id="file-count">0 of 0 objects</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="actions">
+                <button id="btn-cancel" class="btn btn-red" disabled>Cancel</button>
+                <button id="btn-pause" class="btn btn-yellow" disabled>Pause</button>
+                <button id="btn-start" class="btn btn-emerald">Start Copy</button>
+            </section>
+
+            <section class="log-container">
+                <div class="log-header">
+                    <span>Activity Log</span>
+                    <button id="clear-log">Clear</button>
+                </div>
+                <div id="log-content" class="log-content"></div>
+            </section>
+        </main>
+    </div>
+    <div id="overwrite-modal" class="modal-overlay">
+        <div class="modal-content glass-effect">
+            <div class="modal-header">
+                <h3>Overwrite Conflict</h3>
+            </div>
+            <div class="modal-body">
+                <p>Some files or folders already exist in the destination directory.</p>
+                <div class="conflict-details">What would you like to do?</div>
+            </div>
+            <div class="modal-actions">
+                <button id="modal-no-all" class="modal-btn">Skip All</button>
+                <button id="modal-yes-all" class="modal-btn modal-btn-primary">Overwrite All</button>
+                <button id="modal-cancel" class="modal-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js" type="module"></script>
+</body>
+
+</html>

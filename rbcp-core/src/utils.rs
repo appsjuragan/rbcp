@@ -1,10 +1,10 @@
-use std::fs::{self, File};
-use std::io::{self, Write, Seek};
-use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use rand::{Rng, thread_rng};
 use glob::Pattern;
+use rand::{thread_rng, Rng};
+use std::fs::{self, File};
+use std::io::{self, Seek, Write};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub struct Logger {
@@ -29,7 +29,7 @@ impl Logger {
             }
         }
     }
-    
+
     // Log only to file, not stdout
     pub fn log_file_only(&self, message: &str) {
         if let Ok(mut file_guard) = self.file.lock() {
@@ -41,7 +41,9 @@ impl Logger {
 }
 
 pub fn format_time(time: SystemTime) -> String {
-    let duration = time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0));
+    let duration = time
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or(Duration::from_secs(0));
     let secs = duration.as_secs();
 
     let (hour, remainder) = (secs / 3600, secs % 3600);
@@ -57,7 +59,7 @@ pub fn matches_pattern(entry_name: &str, pattern: &str) -> bool {
             return true;
         }
     }
-    
+
     // Fallback/Legacy support
     if pattern == "*" || pattern == "*.*" {
         return true;
@@ -65,12 +67,12 @@ pub fn matches_pattern(entry_name: &str, pattern: &str) -> bool {
 
     if let Some(suffix) = pattern.strip_prefix('*') {
         if pattern.ends_with('*') {
-             // *contains*
-             let substr = &suffix[..suffix.len() - 1];
-             entry_name.contains(substr)
+            // *contains*
+            let substr = &suffix[..suffix.len() - 1];
+            entry_name.contains(substr)
         } else {
-             // *ends_with
-             entry_name.ends_with(suffix)
+            // *ends_with
+            entry_name.ends_with(suffix)
         }
     } else if let Some(prefix) = pattern.strip_suffix('*') {
         // starts_with*
@@ -84,9 +86,7 @@ pub fn securely_delete_file(path: &Path, logger: &Logger) -> io::Result<()> {
     let metadata = fs::metadata(path)?;
     let file_size = metadata.len();
 
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .open(path)?;
+    let mut file = fs::OpenOptions::new().write(true).open(path)?;
 
     const BUFFER_SIZE: usize = 64 * 1024;
     let patterns = [0xFF, 0x00, 0xAA, 0x55, 0xF0, 0x0F];
@@ -142,7 +142,10 @@ pub fn secure_remove_dir_all(dir: &Path, logger: &Logger) -> io::Result<()> {
             }
         }
         fs::remove_dir(dir)?;
-        logger.log_file_only(&format!("Removed directory after secure file deletion: {}", dir.display()));
+        logger.log_file_only(&format!(
+            "Removed directory after secure file deletion: {}",
+            dir.display()
+        ));
     }
     Ok(())
 }

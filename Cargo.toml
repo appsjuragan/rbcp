@@ -1,13 +1,6 @@
-[package]
-name = "rbcp"
-version = "1.1.0-beta.2"
-edition = "2024"
-
-[dependencies]
-filetime = "0.2.25"
-rand = "0.8.5"
-rayon = "1.8"
-glob = "0.3"
-ctrlc = "3.5.1"
-eframe = "0.33.3"
-rfd = "0.17.2"
+[workspace]
+members = [
+    "rbcp-core",
+    "src-tauri",
+]
+resolver = "2"
