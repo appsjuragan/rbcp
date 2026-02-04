@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime};
 use crate::args::CopyOptions;
 use crate::progress::{ProgressCallback, ProgressInfo, ProgressState};
 use crate::stats::Statistics;
-use crate::utils::{Logger, matches_pattern, secure_remove_dir_all, securely_delete_file};
+use crate::utils::{matches_pattern, secure_remove_dir_all, securely_delete_file, Logger};
 
 pub fn copy_directory(
     src_path: &Path,
@@ -36,17 +36,17 @@ pub fn copy_directory(
             // we assume dest is the target filename unless it ends with a separator.
             // But std::path doesn't easily tell us about trailing separators.
             // Let's assume it's the full target path.
-            
+
             // However, if the user selected a folder as destination in GUI, it's a folder path.
             // So we should probably try to create it as a directory if it doesn't have an extension?
             // No, that's risky.
-            
-            // Better heuristic: If we are in "File mode" (source is file), 
+
+            // Better heuristic: If we are in "File mode" (source is file),
             // and destination is an existing directory, copy into it.
             // If destination doesn't exist, we treat it as the target file path.
             // EXCEPT if the user wants to copy file into a new directory.
             // But usually they would specify the directory.
-            
+
             // Let's stick to: if dst exists and is dir, join. Else use as is.
             dst_path.to_path_buf()
         };
@@ -199,7 +199,11 @@ pub fn copy_directory(
     Ok(())
 }
 
-fn should_copy_file(src_meta: &Metadata, dst_meta: Option<&Metadata>, force_overwrite: bool) -> bool {
+fn should_copy_file(
+    src_meta: &Metadata,
+    dst_meta: Option<&Metadata>,
+    force_overwrite: bool,
+) -> bool {
     if force_overwrite {
         return true;
     }
@@ -387,7 +391,7 @@ fn copy_file_content(
 
     let mut buffer = vec![0; BUFFER_SIZE];
     let mut bytes_copied: u64 = 0;
-    
+
     // Create a local progress info to update
     let mut progress_info = ProgressInfo {
         state: ProgressState::Copying,
@@ -414,7 +418,7 @@ fn copy_file_content(
         }
 
         bytes_copied += bytes_read as u64;
-        
+
         // Update progress
         progress_info.current_file_bytes_done = bytes_copied;
         progress.on_progress(&progress_info);

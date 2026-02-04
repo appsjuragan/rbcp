@@ -1,143 +1,250 @@
-# rbcp: Robust Copy Utility
+# RBCP v2.0 - Robust Copy with Modern GUI
 
-`rbcp` is a high-performance, cross-platform command-line file copying utility inspired by Microsoft's Robocopy. It is designed for reliability, speed, and flexibility, offering features like directory mirroring, multithreaded copying, and secure file deletion.
+A powerful, high-performance file copy utility built with Rust and Tauri v2, featuring a stunning emerald-themed glassmorphism UI.
 
-## Features
+![RBCP v2.0](docs/screenshot.png)
 
-*   **Modern GUI**: A beautiful, responsive graphical interface for easy operation.
-*   **Cross-Platform**: Runs natively on Windows, Linux, and macOS.
-*   **Multithreaded Performance**: Utilizes multiple CPU cores for faster file transfers (`/MT`).
-*   **Directory Mirroring**: Synchronize source and destination directories perfectly (`/MIR`).
-*   **Robustness**: Automatic retries for failed copies (`/R`, `/W`) and restartable mode (`/Z`).
-*   **Secure Deletion**: Optional secure shredding of deleted files (`/SHRED`).
-*   **Advanced Filtering**: Include/exclude files based on patterns and attributes.
-*   **Real-time Progress**: Visual progress bars, speed display (MB/s), and detailed logs.
-*   **Single File Support**: Copy individual files or entire folders seamlessly.
+## ✨ Features
 
-## Graphical User Interface (GUI)
+### Core Functionality
+- **🚀 Multi-threaded Copying**: Leverages parallel processing for maximum speed
+- **📊 Real-time Progress**: Accurate percentage with pre-scan counting
+- **🔄 Smart Resumption**: Continue interrupted transfers
+- **🗑️ Secure Deletion**: DOD 5220.22-M compliant file shredding
+- **📁 Windows Explorer Behavior**: Intuitive directory copying (preserves root folder)
+- **🔍 Pattern Matching**: Flexible file filtering with glob patterns
+- **🪞 Mirror Mode**: Synchronize source and destination
+- **♻️ Move Operations**: Cut and paste functionality
 
-Launch `rbcp` without any command-line arguments to open the GUI.
+### GUI Enhancements (v2.0)
+- **🎨 Emerald Green Theme**: Beautiful glassmorphism design with dark/light mode
+- **⚡ Startup Loader**: Smooth loading animation
+- **🔔 Smart Warnings**: Conflict detection with native-style dialogs
+- **📈 Dynamic Status**: Real-time state updates (Ready → Scanning → Copying → Finished)
+- **💾 Directory Memory**: Remembers last used paths
+- **🚫 Infinite Loop Guard**: Prevents copying directory into itself
+- **📏 Responsive Layout**: Adapts to window resizing
+- **📂 Multi-file Selection**: Select folders or multiple files at once
 
-### GUI Features:
-*   **Dark/Light Mode**: Toggle between themes for comfortable viewing.
-*   **Browse Menu**: Easily select folders or individual files as source.
-*   **Real-time Speed**: Monitor transfer rates in MB/s.
-*   **Overwrite Confirmation**: Safety check when destination directory already exists.
-*   **Log View**: Integrated real-time log viewer with toggle.
-*   **Minimize to Tray**: Keep the application running in the background.
+## 🖥️ Screenshots
 
-## Installation
+### Main Interface
+- Clean, modern UI with emerald accents
+- Real-time progress ring with percentage
+- Live transfer speed and object count
+- Activity log with timestamps
 
-### From Source
+### Overwrite Dialog
+- Native Windows-style conflict resolution
+- Options: Skip All, Overwrite All, or Cancel
+- Only appears when actual conflicts exist
 
-1.  Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed.
-2.  Clone the repository:
-    ```bash
-    git clone https://github.com/yourusername/rbcp.git
-    cd rbcp
-    ```
-3.  Build the project:
-    ```bash
-    cargo build --release
-    ```
-4.  The executable will be at `target/release/rbcp`.
+## 🛠️ Installation
 
-## Usage Manual
+### Pre-built Binary
+Download the latest release from the [Releases](https://github.com/yourusername/rbcp/releases) page.
 
-### Basic Syntax
+### Build from Source
 
-```
-rbcp <source> <destination> [file_pattern...] [options]
-```
+#### Prerequisites
+- Rust 1.70+ ([rustup.rs](https://rustup.rs))
+- Node.js 18+ (for Tauri)
+- Windows 10+ / Linux / macOS
 
-*   **source**: Path to the source directory.
-*   **destination**: Path to the destination directory.
-*   **file_pattern**: (Optional) One or more wildcard patterns to filter files (e.g., `*.jpg`, `data*`). Defaults to `*.*`.
-
-### Command Line Options
-
-#### Copy Options
-
-| Option | Description |
-| :--- | :--- |
-| `/S` | Copy subdirectories, but not empty ones. |
-| `/E` | Copy subdirectories, including empty ones. |
-| `/Z` | **Restartable Mode**: Flushes data after every write. Slower but ensures data integrity if interrupted. |
-| `/B` | **Backup Mode**: (Windows only) Attempts to bypass file permission issues. |
-| `/MT[:n]` | **Multithreading**: Run with `n` threads. If `n` is omitted, defaults to 8. If `/MT` is not used, runs single-threaded. |
-| `/EMPTY` | **Empty Files**: Create zero-byte placeholders instead of copying actual file content. Useful for testing structure. |
-
-#### Selection & Filtering
-
-| Option | Description |
-| :--- | :--- |
-| `/CHILDONLY` | **Child Only**: Process only the immediate children of the source directory, ignoring the root files. |
-| `/A+:[RASHCNETO]` | **Add Attributes**: Add the specified attributes to copied files (Read-only, Archive, System, Hidden, etc.). |
-| `/A-:[RASHCNETO]` | **Remove Attributes**: Remove the specified attributes from copied files. |
-
-#### Move & Delete Options
-
-| Option | Description |
-| :--- | :--- |
-| `/PURGE` | **Purge**: Delete files/directories in the destination that no longer exist in the source. |
-| `/MIR` | **Mirror**: Equivalent to `/E` + `/PURGE`. Makes the destination an exact copy of the source. |
-| `/MOV` | **Move Files**: Delete files from the source after they are successfully copied. |
-| `/MOVE` | **Move All**: Delete files and directories from the source after copying. |
-| `/SHRED` | **Secure Delete**: When deleting files (via `/PURGE`, `/MIR`, or `/MOV`), overwrite them with random data before deletion to prevent recovery. |
-
-#### Logging & Control
-
-| Option | Description |
-| :--- | :--- |
-| `/L` | **List Only**: List files that *would* be copied or deleted, but do not make any changes. |
-| `/LOG:file` | **Log File**: Write status output to the specified file (overwrites existing). |
-| `/NP` | **No Progress**: Do not display the percentage progress bar (recommended for log files). |
-| `/NFL` | **No File List**: Do not log the names of files being copied. |
-| `/R:n` | **Retries**: Number of times to retry a failed copy (default: 1 million). |
-| `/W:n` | **Wait**: Wait time (in seconds) between retries (default: 30). |
-
-## Examples
-
-### 1. Simple Backup
-Copy all files from `C:\Work` to `D:\Backup`, including subdirectories.
+#### Build Steps
 ```bash
-rbcp C:\Work D:\Backup /E
+# Clone the repository
+git clone https://github.com/yourusername/rbcp.git
+cd rbcp
+
+# Build release version
+cargo build --release
+
+# GUI executable will be in:
+# ./target/release/rbcp-gui.exe (Windows)
+# ./target/release/rbcp-gui (Linux/macOS)
 ```
 
-### 2. Mirroring (Exact Sync)
-Make `D:\Backup` exactly match `C:\Work`. **Warning**: This deletes files in `D:\Backup` that are not in `C:\Work`.
+## 📖 Usage
+
+### GUI Mode
+
+1. Launch `rbcp-gui.exe`
+2. **Select Source**: Click 📁 for folder or 📄 for files
+3. **Select Destination**: Choose target directory
+4. **Configure Options** (optional):
+   - Recursive: Include subdirectories
+   - Mirror: Sync source to destination
+   - Move: Delete source after copy
+   - Secure Delete: Shred moved files
+5. Click **Start Copy**
+
+### CLI Mode
+
 ```bash
-rbcp C:\Work D:\Backup /MIR
+# Basic copy
+rbcp source_dir dest_dir
+
+# Recursive copy with patterns
+rbcp source dest -r -p "*.txt" "*.md"
+
+# Mirror directories
+rbcp source dest --mirror
+
+# Multi-threaded copy
+rbcp source dest -t 16
+
+# Secure move
+rbcp source dest --move --shred
 ```
 
-### 3. Fast Multithreaded Copy
-Copy using 16 threads for maximum speed.
+#### Common Options
+```
+-r, --recursive         Copy subdirectories
+-t, --threads <N>       Number of threads (default: 8)
+-p, --patterns <PAT>    File patterns to match
+--mirror                Mirror mode (sync with deletion)
+--move                  Move instead of copy
+--shred                 Secure file deletion
+--force                 Overwrite without prompt
+```
+
+## 🎯 Advanced Features
+
+### Pattern Matching
+Supports glob patterns for flexible file filtering:
 ```bash
-rbcp C:\Images D:\Images /E /MT:16
+# Copy only images
+rbcp source dest -p "*.jpg" "*.png" "*.gif"
+
+# Exclude specific files
+rbcp source dest -p "*" "!*.tmp"
+
+# Copy by name pattern
+rbcp source dest -p "report_*.pdf"
 ```
 
-### 4. Move and Securely Delete
-Move files to an archive and securely shred the originals.
+### Conflict Resolution
+When files/folders exist at destination:
+- **Skip All**: Preserve existing files
+- **Overwrite All**: Replace all conflicts
+- **Cancel**: Abort operation
+
+### Progress Tracking
+The engine performs a fast pre-scan to:
+1. Count total files and bytes
+2. Enable accurate progress percentage
+3. Show meaningful "X of Y objects" counter
+
+## 🏗️ Architecture
+
+### Tech Stack
+- **Core**: Rust (rbcp-core library)
+- **GUI Framework**: Tauri v2
+- **Frontend**: Vanilla HTML/CSS/JavaScript
+- **Parallelism**: Rayon
+- **File Operations**: std::fs + custom optimizations
+
+### Project Structure
+```
+rbcp/
+├── rbcp-core/          # Core copy engine (library)
+│   ├── src/
+│   │   ├── engine.rs   # Main copy orchestration
+│   │   ├── copy.rs     # File/directory operations
+│   │   ├── progress.rs # Progress tracking
+│   │   ├── args.rs     # Configuration
+│   │   └── stats.rs    # Statistics
+│   └── Cargo.toml
+├── src-tauri/          # Tauri backend
+│   ├── src/
+│   │   ├── main.rs
+│   │   └── commands.rs # Tauri commands
+│   └── tauri.conf.json
+├── ui/                 # Frontend
+│   ├── index.html
+│   ├── style.css
+│   └── main.js
+└── README.md
+```
+
+## 🔧 Development
+
+### Running in Dev Mode
 ```bash
-rbcp C:\Sensitive D:\Archive /MOVE /SHRED
+# Start Tauri dev server
+cd src-tauri
+cargo tauri dev
 ```
 
-### 5. Network Transfer with Retries
-Copy over a flaky network connection, retrying 5 times with a 10-second wait.
+### Code Formatting
 ```bash
-rbcp \\Server\Share C:\Local /Z /R:5 /W:10
+# Format all Rust code
+cargo fmt
+
+# Check formatting
+cargo fmt -- --check
 ```
 
-### 6. Filter Specific Files
-Copy only `.jpg` and `.png` files.
+### Running Tests
 ```bash
-rbcp C:\Photos D:\Backup *.jpg *.png /S
+# Run all tests
+cargo test
+
+# Run with output
+cargo test -- --nocapture
 ```
 
-## Return Codes
+## 📝 Configuration
 
-`rbcp` does not currently use standard Robocopy return codes (bitmaps). It returns `0` on success and non-zero on critical errors. Check the logs for detailed failure counts.
+### GUI Settings (Persistent)
+The GUI automatically remembers:
+- Last source directory
+- Last destination directory
+- Theme preference (dark/light)
 
-## License
+Settings are stored in browser localStorage.
 
-MIT License
+## 🐛 Known Issues & Limitations
+
+- **Windows Only**: Some features are Windows-specific
+- **Large Operations**: Very large file counts (>1M files) may take time to scan
+- **Network Drives**: Performance may vary on network paths
+
+## 🗺️ Roadmap
+
+- [ ] Linux/macOS support
+- [ ] Bandwidth throttling
+- [ ] Resume interrupted transfers
+- [ ] Cloud storage integration
+- [ ] Scheduled/automated copies
+- [ ] File deduplication
+- [ ] Compression support
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and formatting
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Inspired by `robocopy` and `rsync`
+- Built with [Tauri](https://tauri.app)
+- UI design influenced by modern glassmorphism trends
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/rbcp/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/rbcp/discussions)
+
+---
+
+**Made with ❤️ and Rust**

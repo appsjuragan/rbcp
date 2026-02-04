@@ -1,11 +1,12 @@
+use serde::{Deserialize, Serialize};
 use std::env;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CopyOptions {
     pub sources: Vec<String>,
     pub destination: String,
     pub patterns: Vec<String>,
-    
+
     pub recursive: bool,
     pub include_empty: bool,
     pub restartable: bool,
@@ -27,6 +28,7 @@ pub struct CopyOptions {
     pub child_only: bool,
     pub shred_files: bool,
     pub force_overwrite: bool,
+    pub preserve_root: bool,
 }
 
 impl Default for CopyOptions {
@@ -56,6 +58,7 @@ impl Default for CopyOptions {
             child_only: false,
             shred_files: false,
             force_overwrite: false,
+            preserve_root: false,
         }
     }
 }
@@ -63,7 +66,7 @@ impl Default for CopyOptions {
 impl CopyOptions {
     pub fn parse() -> Result<Self, String> {
         let args: Vec<String> = env::args().collect();
-        
+
         if args.len() < 3 {
             return Err("Not enough arguments".to_string());
         }
@@ -81,7 +84,7 @@ impl CopyOptions {
                     "/E" => {
                         options.recursive = true;
                         options.include_empty = true;
-                    },
+                    }
                     "/Z" => options.restartable = true,
                     "/B" => options.backup_mode = true,
                     "/PURGE" => options.purge = true,
@@ -89,12 +92,12 @@ impl CopyOptions {
                         options.purge = true;
                         options.recursive = true;
                         options.include_empty = true;
-                    },
+                    }
                     "/MOV" => options.move_files = true,
                     "/MOVE" => {
                         options.move_files = true;
                         options.move_dirs = true;
-                    },
+                    }
                     "/L" => options.list_only = true,
                     "/NP" => options.show_progress = false,
                     "/NFL" => options.log_file_names = false,
@@ -107,11 +110,12 @@ impl CopyOptions {
                         } else if let Some(stripped) = upper_arg.strip_prefix("/A-:") {
                             options.attributes_remove = stripped.to_string();
                         } else if upper_arg.starts_with("/MT") {
-                            let threads = if upper_arg.len() > 4 && upper_arg.chars().nth(3) == Some(':') {
-                                upper_arg[4..].parse::<usize>().unwrap_or(8)
-                            } else {
-                                8
-                            };
+                            let threads =
+                                if upper_arg.len() > 4 && upper_arg.chars().nth(3) == Some(':') {
+                                    upper_arg[4..].parse::<usize>().unwrap_or(8)
+                                } else {
+                                    8
+                                };
                             options.threads = threads;
                         } else if let Some(stripped) = upper_arg.strip_prefix("/R:") {
                             let retries = stripped.parse::<usize>().unwrap_or(1_000_000);
@@ -230,7 +234,10 @@ impl CopyOptions {
 }
 
 pub fn print_usage(program_name: &str) {
-    println!("Usage: {} <source> <destination> [<file_pattern>...] [options]", program_name);
+    println!(
+        "Usage: {} <source> <destination> [<file_pattern>...] [options]",
+        program_name
+    );
     println!("Options:");
     println!("  /S         - Copy subdirectories, but not empty ones");
     println!("  /E         - Copy subdirectories, including empty ones");

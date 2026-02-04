@@ -7,8 +7,10 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 /// Current state of a copy operation
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProgressState {
     /// Initial state, not started
     Idle,
@@ -27,7 +29,7 @@ pub enum ProgressState {
 }
 
 /// Information about the current progress of a copy operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgressInfo {
     /// Current state of the operation
     pub state: ProgressState,
@@ -68,9 +70,22 @@ impl ProgressInfo {
     /// Calculate overall progress as a percentage (0-100)
     pub fn percentage(&self) -> f32 {
         if self.bytes_total == 0 {
-            0.0
+            if self.files_total > 0 && self.files_done == self.files_total {
+                // If we have files but 0 bytes total (empty files), and we are done, return 100.
+                100.0
+            } else {
+                0.0
+            }
         } else {
-            (self.bytes_done as f32 / self.bytes_total as f32) * 100.0
+            // Clamp to 100.0 to avoid slight over-reporting due to concurrency
+            let pct = (self.bytes_done as f64 / self.bytes_total as f64) * 100.0;
+            if pct > 100.0 {
+                100.0
+            } else if pct < 0.0 {
+                0.0
+            } else {
+                pct as f32
+            }
         }
     }
 
@@ -116,8 +131,12 @@ pub struct NullProgress;
 impl ProgressCallback for NullProgress {
     fn on_progress(&self, _info: &ProgressInfo) {}
     fn on_log(&self, _message: &str) {}
-    fn is_cancelled(&self) -> bool { false }
-    fn is_paused(&self) -> bool { false }
+    fn is_cancelled(&self) -> bool {
+        false
+    }
+    fn is_paused(&self) -> bool {
+        false
+    }
 }
 
 /// A CLI progress callback that prints to stdout.
