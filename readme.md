@@ -1,4 +1,4 @@
-# RBCP v2.0 - Robust Copy with Modern GUI
+# RBCP v2.0.1 Beta - Robust Copy with Modern GUI
 
 A powerful, high-performance file copy utility built with Rust and Tauri v2, featuring a stunning emerald-themed glassmorphism UI.
 
@@ -16,7 +16,7 @@ A powerful, high-performance file copy utility built with Rust and Tauri v2, fea
 - **🪞 Mirror Mode**: Synchronize source and destination
 - **♻️ Move Operations**: Cut and paste functionality
 
-### GUI Enhancements (v2.0)
+### GUI Enhancements (v2.0.1 Beta)
 - **🎨 Emerald Green Theme**: Beautiful glassmorphism design with dark/light mode
 - **⚡ Startup Loader**: Smooth loading animation
 - **🔔 Smart Warnings**: Conflict detection with native-style dialogs
