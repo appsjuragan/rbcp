@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
     const threadSlider = document.getElementById('thread-count');
     const threadVal = document.getElementById('thread-val');
+    const retrySlider = document.getElementById('retry-count');
+    const retryVal = document.getElementById('retry-val');
 
     // State
     let isRunning = false;
@@ -132,12 +134,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     toggleOptions.onclick = () => {
-        optionsPanel.classList.toggle('show');
-        document.querySelector('.arrow').textContent = optionsPanel.classList.contains('show') ? '▲' : '▼';
+        const isShown = optionsPanel.classList.toggle('show');
+        const arrow = toggleOptions.querySelector('.arrow');
+        if (arrow) {
+            arrow.textContent = isShown ? '▲' : '▼';
+        }
+        // Force a layout recalculation or just confirm it worked
+        if (isShown) {
+            optionsPanel.style.display = 'block';
+        } else {
+            optionsPanel.style.display = 'none';
+        }
     };
 
     threadSlider.oninput = () => {
         threadVal.textContent = threadSlider.value;
+    };
+
+    retrySlider.oninput = () => {
+        retryVal.textContent = retrySlider.value;
     };
 
     themeToggle.onclick = () => {
@@ -219,14 +234,14 @@ document.addEventListener('DOMContentLoaded', () => {
             attributes_add: "",
             attributes_remove: "",
             threads: parseInt(threadSlider.value),
-            retries: 1000000,
+            retries: parseInt(retrySlider.value),
             wait_time: 30,
             log_file: null,
             list_only: false,
             show_progress: true,
             log_file_names: true,
-            empty_files: false,
-            child_only: false,
+            empty_files: document.getElementById('opt-empty').checked,
+            child_only: document.getElementById('opt-childonly').checked,
             shred_files: document.getElementById('opt-shred').checked,
             force_overwrite: overwriteMode === 'overwrite',
             preserve_root: true

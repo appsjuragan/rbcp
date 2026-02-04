@@ -73,10 +73,24 @@
                             <span class="slider"></span>
                             <span class="label">Move Files (/MOV)</span>
                         </label>
+                        <label class="switch-item">
+                            <input type="checkbox" id="opt-empty">
+                            <span class="slider"></span>
+                            <span class="label">Empty Files (/EMPTY)</span>
+                        </label>
+                        <label class="switch-item">
+                            <input type="checkbox" id="opt-childonly">
+                            <span class="slider"></span>
+                            <span class="label">Child Only (/CHILDONLY)</span>
+                        </label>
                     </div>
                     <div class="slider-group">
                         <label>Thread Count: <span id="thread-val">8</span></label>
                         <input type="range" id="thread-count" min="1" max="128" value="8">
+                    </div>
+                    <div class="slider-group">
+                        <label>Retries: <span id="retry-val">1000000</span></label>
+                        <input type="range" id="retry-count" min="0" max="1000000" step="1000" value="1000000">
                     </div>
                 </div>
             </section>

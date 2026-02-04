@@ -132,7 +132,6 @@ input[type="text"] {
 .options-collapsible {
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    overflow: hidden;
 }
 
 .collapse-trigger {
@@ -147,14 +146,27 @@ input[type="text"] {
     cursor: pointer;
 }
 
-.options-content {
+#options-panel {
+    display: none;
     padding: 16px;
     border-top: 1px solid var(--border-color);
-    display: none;
 }
 
-.options-content.show {
-    display: block;
+#options-panel.show {
+    display: block !important;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .toggle-grid {
