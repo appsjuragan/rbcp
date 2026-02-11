@@ -1,4 +1,4 @@
-# RBCP v2.0.1 Beta - Robust Copy with Premium GUI
+# RBCP v2.0.2 Beta - Robust Copy with Premium GUI
 
 A powerful, high-performance file copy utility built with Rust and Tauri v2, featuring a stunning macOS-inspired glassmorphism UI.
 
