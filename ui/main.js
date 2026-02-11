@@ -29,6 +29,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const retrySlider = document.getElementById('retry-count');
     const retryVal = document.getElementById('retry-val');
 
+    // Security: Disable common key combinations except essential ones
+    document.addEventListener('keydown', (e) => {
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const key = e.key.toLowerCase();
+
+        // 1. Always allow standard text editing and selection
+        const isCopy = isCtrl && key === 'c';
+        const isPaste = isCtrl && key === 'v';
+        const isCut = isCtrl && key === 'x';
+        const isUndo = isCtrl && key === 'z' && !e.shiftKey;
+        const isRedo = (isCtrl && key === 'y') || (isCtrl && key === 'z' && e.shiftKey);
+        const isSelectAll = isCtrl && key === 'a';
+
+        if (isCopy || isPaste || isCut || isUndo || isRedo || isSelectAll) {
+            return;
+        }
+
+        // 2. Block system/browser shortcuts (Reload, Save, Print, Find, etc.)
+        const prohibitedSystemKeys = ['r', 's', 'p', 'f', 'g', 'h', 'o', 'n', 't', 'w', 'j', 'u'];
+        const isFunctionKey = e.key.startsWith('F');
+
+        if ((isCtrl && prohibitedSystemKeys.includes(key)) || isFunctionKey) {
+            e.preventDefault();
+            return;
+        }
+
+        // 3. Prevent context menu key
+        if (e.key === 'ContextMenu') {
+            e.preventDefault();
+        }
+    });
+
+    // Disable Right-Click context menu
+    document.addEventListener('contextmenu', (e) => {
+        // Allow context menu only for input fields if needed, 
+        // but user requested to disable combinations/ux typical of browser
+        e.preventDefault();
+    }, false);
+
     // State
     let isRunning = false;
     let isPaused = false;
@@ -103,11 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selected) {
             if (Array.isArray(selected)) {
                 if (selected.length > 0) {
-                    // Save directory of first file
-                    // Need to extract dir path? Tauri open returns full paths.
-                    // We can't easily get dir path in JS without logic, but defaultPath handles full path too often.
-                    // Let's just store the full path of the first item, defaultPath might handle it or we can try to find parent.
-                    // Simpler: just store it.
+                    // Selection successful
                 }
                 if (selected.length === 1) {
                     sourceInput.value = selected[0];
